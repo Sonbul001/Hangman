@@ -163,7 +163,7 @@ public class Server implements Runnable {
                 writer.flush();
 
                 while (team.getPlayers().size()!=teamSize) {
-                    //team = Database.getTeam(team.getCode());
+                    System.out.print("");
                 }
 
                 out = "Team is full";
@@ -206,12 +206,12 @@ public class Server implements Runnable {
                 writer.newLine();
                 writer.flush();
 
-                while(Database.getMultiGamePlayer(loggedinPlayer)==null){}
+                while(Database.getMultiGamePlayer(loggedinPlayer)==null){System.out.print("");}
                 game = Database.getMultiGamePlayer(loggedinPlayer);
 
             }
  
-            while(!gameStarted){}
+            while(!gameStarted){System.out.print("");}
 
             out = "Game has started";
             writer.write(out);
@@ -243,7 +243,7 @@ public class Server implements Runnable {
                         writer.newLine();
                         writer.flush();
                     }
-                    while(!playerPlayed){}
+                    while(!playerPlayed){System.out.print("");}
                     playerPlayed = false;
                     out = name + " has guessed " + game.getGuessedLetters().get(game.getGuessedLetters().size()-1);
                     writer.write(out);

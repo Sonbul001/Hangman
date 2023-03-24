@@ -1,6 +1,5 @@
 package com.mycompany.hangman.Database;
 
-import com.mycompany.hangman.Game.Hangman;
 import com.mycompany.hangman.Game.HangmanMulti;
 import com.mycompany.hangman.Game.Player;
 import com.mycompany.hangman.Game.Team;

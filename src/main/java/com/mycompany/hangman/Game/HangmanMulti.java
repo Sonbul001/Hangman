@@ -10,7 +10,7 @@ import java.util.ArrayList;
  *
  * @author Lenovo
  */
-public class HangmanMulti extends Hangman {
+public class HangmanMulti {
     private Team team1;
     private Team team2;
     private String word;

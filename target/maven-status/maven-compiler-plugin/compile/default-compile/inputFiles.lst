@@ -1,3 +1,7 @@
-E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Hangman.java
-E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Server.java
-E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Client.java
+E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Database\Database.java
+E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Server\Server.java
+E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Game\HangmanSingle.java
+E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Game\Player.java
+E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Game\Team.java
+E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Game\HangmanMulti.java
+E:\FCAI\4th Year\Term2\SE\Assignment\Hangman\src\main\java\com\mycompany\hangman\Server\Client.java

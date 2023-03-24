@@ -1,3 +1,7 @@
-com\mycompany\hangman\Client.class
-com\mycompany\hangman\Hangman.class
-com\mycompany\hangman\Server.class
+com\mycompany\hangman\Game\Player.class
+com\mycompany\hangman\Game\HangmanMulti.class
+com\mycompany\hangman\Game\Team.class
+com\mycompany\hangman\Server\Client.class
+com\mycompany\hangman\Server\Server.class
+com\mycompany\hangman\Game\HangmanSingle.class
+com\mycompany\hangman\Database\Database.class

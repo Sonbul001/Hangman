@@ -3,7 +3,7 @@ package com.mycompany.hangman.Game;
 
 import java.util.ArrayList;
 
-public class HangmanSingle extends Hangman{
+public class HangmanSingle {
     private Player player;
     private String word;
     private String hiddenWord;

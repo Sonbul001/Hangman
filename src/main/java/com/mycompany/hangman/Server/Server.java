@@ -27,9 +27,6 @@ public class Server implements Runnable {
     //protected boolean teamFull = false;
     protected Player loggedinPlayer = null;
 
-
-    
-
     public static void loadFiles() {
         creds = new File("credentials.txt");
         history = new File("history.txt");
@@ -113,7 +110,7 @@ public class Server implements Runnable {
         return gameStarted;
     }
 
-    public void MultiplayerGame(){
+    public void MultiplayerGame() {
         try {
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -154,7 +151,7 @@ public class Server implements Runnable {
                 in = reader.readLine();
                 int teamSize = Integer.parseInt(in);
 
-                Team team = new Team(teamName,loggedinPlayer, teamSize);
+                Team team = new Team(teamName, loggedinPlayer, teamSize);
                 Database.addTeam(team);
 
                 out = "Team Code is: " + team.getCode();
@@ -162,7 +159,7 @@ public class Server implements Runnable {
                 writer.newLine();
                 writer.flush();
 
-                while (team.getPlayers().size()!=teamSize) {
+                while (team.getPlayers().size() != teamSize) {
                     System.out.print("");
                 }
 
@@ -171,15 +168,15 @@ public class Server implements Runnable {
                 writer.newLine();
                 writer.flush();
 
-                out="Please enter ready to search for opponent";
+                out = "Please enter ready to search for opponent";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
 
                 in = reader.readLine();
-                if(in.equalsIgnoreCase("ready")){
+                if (in.equalsIgnoreCase("ready")) {
                     String word = Database.getWord();
-                    game = Database.createMultiplayerGame(teamSize,team,word);
+                    game = Database.createMultiplayerGame(teamSize, team, word);
 
                     out = "Game has been created";
                     writer.write(out);
@@ -199,19 +196,23 @@ public class Server implements Runnable {
 
                 in = reader.readLine();
                 int code = Integer.parseInt(in);
-                Team team = Database.joinTeam(loggedinPlayer,code);
+                Team team = Database.joinTeam(loggedinPlayer, code);
 
                 out = "Please wait for Leader to start the game";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
 
-                while(Database.getMultiGamePlayer(loggedinPlayer)==null){System.out.print("");}
+                while (Database.getMultiGamePlayer(loggedinPlayer) == null) {
+                    System.out.print("");
+                }
                 game = Database.getMultiGamePlayer(loggedinPlayer);
 
             }
- 
-            while(!gameStarted){System.out.print("");}
+
+            while (!gameStarted) {
+                System.out.print("");
+            }
 
             out = "Game has started";
             writer.write(out);
@@ -223,29 +224,30 @@ public class Server implements Runnable {
             writer.newLine();
             writer.flush();
 
-
-            while(!game.isGameOver()){
+            while (!game.isGameOver()) {
                 while (!turn) {
-                    if(game.isGameOver()) {
+                    if (game.isGameOver()) {
                         break;
                     }
                     String name;
-                    if(game.getTeamTurn()==1) {
-                        name = game.getTeam1().getPlayers().get(game.getTurn()-1).getName();
+                    if (game.getTeamTurn() == 1) {
+                        name = game.getTeam1().getPlayers().get(game.getTurn() - 1).getName();
                         out = "it's " + name + "'s  turn";
                         writer.write(out);
                         writer.newLine();
                         writer.flush();
-                    }else{
-                        name = game.getTeam2().getPlayers().get(game.getTurn()-1).getName();
+                    } else {
+                        name = game.getTeam2().getPlayers().get(game.getTurn() - 1).getName();
                         out = "it's " + name + "'s  turn";
                         writer.write(out);
                         writer.newLine();
                         writer.flush();
                     }
-                    while(!playerPlayed){System.out.print("");}
+                    while (!playerPlayed) {
+                        System.out.print("");
+                    }
                     playerPlayed = false;
-                    out = name + " has guessed " + game.getGuessedLetters().get(game.getGuessedLetters().size()-1);
+                    out = name + " has guessed " + game.getGuessedLetters().get(game.getGuessedLetters().size() - 1);
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
@@ -255,10 +257,14 @@ public class Server implements Runnable {
                     writer.newLine();
                     writer.flush();
                 }
-                if(game.getTeamTurn()==1)
+                if (game.isGameOver()) {
+                    break;
+                }
+                if (game.getTeamTurn() == 1) {
                     out = "You have " + game.getTeam1IncorrectGuesses() + " incorrect guesses left";
-                else
+                } else {
                     out = "You have " + game.getTeam2IncorrectGuesses() + " incorrect guesses left";
+                }
 
                 writer.write(out);
                 writer.newLine();
@@ -272,16 +278,12 @@ public class Server implements Runnable {
                 in = reader.readLine();
                 char letter = in.charAt(0);
 
-                if(game.checkGuess(letter,loggedinPlayer))
-                {
+                if (game.checkGuess(letter, loggedinPlayer)) {
                     out = "Correct";
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
-                }
-
-                else
-                {
+                } else {
                     out = "Incorrect";
                     writer.write(out);
                     writer.newLine();
@@ -308,6 +310,7 @@ public class Server implements Runnable {
         }
 
     }
+
     @Override
     public void run() {
         try {
@@ -348,11 +351,11 @@ public class Server implements Runnable {
                 System.out.println(info[0]);
                 System.out.println(info[1]);
                 Player result = Database.getPlayer(info[0], info[1]);
-                if(result == null){
+                if (result == null) {
                     writer.write("Wrong Username or Password");
                     writer.newLine();
                     writer.flush();
-                }else{
+                } else {
                     writer.write("Welcome " + result.getName());
                     writer.newLine();
                     writer.flush();
@@ -374,8 +377,8 @@ public class Server implements Runnable {
                 writer.write(result);
                 writer.newLine();
                 writer.flush();
-            }else{
-                
+            } else {
+
             }
             out = "Please choose one of the following:";
             writer.write(out);
@@ -391,9 +394,9 @@ public class Server implements Runnable {
             writer.write(out);
             writer.newLine();
             writer.flush();
-            
+
             in = reader.readLine();
-            if(in.equalsIgnoreCase("1")){
+            if (in.equalsIgnoreCase("1")) {
                 String word = Database.getWord();
                 HangmanSingle game = new HangmanSingle(loggedinPlayer, word);
                 out = "Your word is " + game.getHiddenWord();
@@ -406,8 +409,7 @@ public class Server implements Runnable {
                 writer.newLine();
                 writer.flush();
 
-
-                while(game.getIncorrectGuesses()!=0&&!game.getHiddenWord().equalsIgnoreCase(word)) {
+                while (game.getIncorrectGuesses() != 0 && !game.getHiddenWord().equalsIgnoreCase(word)) {
                     out = "Please guess a letter";
                     writer.write(out);
                     writer.newLine();
@@ -416,12 +418,12 @@ public class Server implements Runnable {
 
                     char guessCharacter = in.charAt(0);
 
-                    if(game.checkGuess(guessCharacter)){
+                    if (game.checkGuess(guessCharacter)) {
                         out = "Correct!";
                         writer.write(out);
                         writer.newLine();
                         writer.flush();
-                    }else{
+                    } else {
                         out = "Incorrect!";
                         writer.write(out);
                         writer.newLine();
@@ -432,19 +434,17 @@ public class Server implements Runnable {
                     writer.newLine();
                     writer.flush();
 
-
-
                     out = "You have " + game.getIncorrectGuesses() + " remaining guesses";
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
                 }
-                if(game.getHiddenWord().equalsIgnoreCase(word)) {
+                if (game.getHiddenWord().equalsIgnoreCase(word)) {
                     out = "You win!";
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
-                }else{
+                } else {
                     out = "You lose!";
                     writer.write(out);
                     writer.newLine();
@@ -457,9 +457,9 @@ public class Server implements Runnable {
                 writer.flush();
 
                 loggedinPlayer.addToSinglePlayerGamesHistory(game.getCorrectGuesses());
-                Database.addGameToHistory(loggedinPlayer.getUsername(),"single" ,game.getCorrectGuesses());
+                Database.addGameToHistory(loggedinPlayer.getUsername(), "single", game.getCorrectGuesses());
 
-            } else if(in.equalsIgnoreCase("2")){
+            } else if (in.equalsIgnoreCase("2")) {
                 MultiplayerGame();
             }
         } catch (Exception e) {

@@ -17,13 +17,11 @@ public class Database {
     private static ArrayList<Player> players = new ArrayList<>();
     private static ArrayList<Team> teams = new ArrayList<>();
     private static ArrayList<HangmanMulti> multiplayerGames = new ArrayList<>();
-
+    private static ArrayList<Player> loggedInPlayers = new ArrayList<>();
 
     private static int incorrectGuesses;
     private static int minPlayers;
     private static int maxPlayers;
-
-    private static Database singelton = null;
 
     public static void loadFiles() {
         try {
@@ -38,6 +36,39 @@ public class Database {
             e.printStackTrace();
         }
 
+    }
+
+    public static boolean checkUsername(String username) {
+        try {
+            Scanner reader = new Scanner(creds);
+            while (reader.hasNextLine()) {
+                String data = reader.nextLine();
+                String[] parsed = data.split(" ");
+                if (parsed[0].equals(username)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean checkPassword(String username,String password){
+        try {
+            Scanner reader = new Scanner(creds);
+            while (reader.hasNextLine()) {
+                String data = reader.nextLine();
+                String[] parsed = data.split(" ");
+                if (parsed[0].equals(username)) {
+                    if(parsed[1].equals(password))
+                        return true;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public static Player getPlayer(String username, String password) {
@@ -149,11 +180,10 @@ public class Database {
     public static String getWord() {
         try {
             Scanner reader = new Scanner(lookup);
-            Random rand = new Random();
-            int wordLine = rand.nextInt(20);
+            int wordLine =(int) Math.round(Math.random()*20);
             for (int i = 0; i < wordLine; i++) {
-                if(i==wordLine-1) {
-                    reader.nextLine();
+                reader.nextLine();
+                if(i==wordLine-2) {
                     String word = reader.nextLine();
                     return word;
                 }
@@ -183,6 +213,26 @@ public class Database {
     return null;
     }
 
+    public static boolean checkTeamExists(int code) {
+        for (Team team : teams) {
+            if (team.getCode() == code) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean checkTeamFull(int code) {
+        for (Team team : teams) {
+            if (team.getCode() == code) {
+                if (team.getPlayers().size() == team.getMaxPlayers()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static HangmanMulti createMultiplayerGame(int size, Team team, String word) {
         for (HangmanMulti game : multiplayerGames) {
             if(!game.isStarted()) {
@@ -192,9 +242,13 @@ public class Database {
                 }
             }
         }
-        HangmanMulti game = new HangmanMulti(team, word);
+        HangmanMulti game = new HangmanMulti(team, word, Database.getIncorrectGuesses());
         multiplayerGames.add(game);
         return game;
+    }
+
+    public static void removeMultiplayerGame(HangmanMulti game) {
+        multiplayerGames.remove(game);
     }
 
     public static Team getTeam(int code) {
@@ -218,4 +272,72 @@ public class Database {
         }
         return null;
     }
+
+    /***
+     * Checks if the team name is already taken
+     * @param teamName
+     * @return true if the team name is not taken, false if it is
+     */
+    public static boolean checkTeamNames(String teamName) {
+        for (Team team : teams) {
+            if (team.getTeamName().equals(teamName)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /***
+     * Checks if the team size is valid
+     * @param size
+     * @return true if the team size is valid, false if it is not
+     */
+    public static boolean checkTeamSize(int size) {
+        if (size > maxPlayers || size< minPlayers) {
+            return false;
+        }
+        return true;
+    }
+
+    public static int getIncorrectGuesses() {
+        return incorrectGuesses;
+    }
+
+    public static void setIncorrectGuesses(int incorrectGuesses) {
+        Database.incorrectGuesses = incorrectGuesses;
+    }
+
+    public static int getMinPlayers() {
+        return minPlayers;
+    }
+
+    public static void setMinPlayers(int minPlayers) {
+        Database.minPlayers = minPlayers;
+    }
+
+    public static int getMaxPlayers() {
+        return maxPlayers;
+    }
+
+    public static void setMaxPlayers(int maxPlayers) {
+        Database.maxPlayers = maxPlayers;
+    }
+
+    public static boolean checkLoggedIn(String username) {
+        for (Player player : loggedInPlayers) {
+            if (player.getUsername().equals(username)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void addLoggedInPlayer(Player player) {
+        loggedInPlayers.add(player);
+    }
+
+    public static void removeLoggedInPlayer(Player player) {
+        loggedInPlayers.remove(player);
+    }
+
 }

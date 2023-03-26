@@ -4,12 +4,12 @@
  */
 package com.mycompany.hangman.Game;
 
+import com.mycompany.hangman.Database.Database;
+
 import java.util.ArrayList;
 
-/**
- *
- * @author Lenovo
- */
+import static java.lang.Thread.sleep;
+
 public class HangmanMulti {
     private Team team1;
     private Team team2;
@@ -26,13 +26,13 @@ public class HangmanMulti {
 
     private boolean started;
 
-    public HangmanMulti(Team team1, Team team2, String word) {
+    public HangmanMulti(Team team1, Team team2, String word,int incorrectGuesses) {
         this.team1 = team1;
         this.team2 = team2;
         this.word = word;
         this.guessedLetters = new ArrayList<>();
-        this.Team1IncorrectGuesses = 6;
-        this.Team2IncorrectGuesses = 6;
+        this.Team1IncorrectGuesses = incorrectGuesses*team1.getPlayers().size();
+        this.Team2IncorrectGuesses = incorrectGuesses*team1.getPlayers().size();;
         this.Team1CorrectGuesses = 0;
         this.Team2CorrectGuesses = 0;
         this.hiddenWord = "";
@@ -45,13 +45,12 @@ public class HangmanMulti {
 
         start();
     }
-
-    public HangmanMulti(Team team1, String word) {
+    public HangmanMulti(Team team1, String word, int incorrectGuesses) {
         this.team1 = team1;
         this.word = word;
         this.guessedLetters = new ArrayList<>();
-        this.Team1IncorrectGuesses = 6;
-        this.Team2IncorrectGuesses = 6;
+        this.Team1IncorrectGuesses = incorrectGuesses*team1.getPlayers().size();;
+        this.Team2IncorrectGuesses = incorrectGuesses*team1.getPlayers().size();;
         this.Team1CorrectGuesses = 0;
         this.Team2CorrectGuesses = 0;
         this.hiddenWord = "";
@@ -62,13 +61,10 @@ public class HangmanMulti {
                 this.hiddenWord += "_";
         }
     }
-
-
     public void joinGame(Team team) {
         team2 = team;
         start();
     }
-
     public void start() {
         started = true;
         turn = 1;
@@ -80,15 +76,16 @@ public class HangmanMulti {
         }
         team1.getPlayers().get(turn - 1).getServer().setTurn(true);
     }
-
     public boolean checkGuess(char guess, Player player) {
+        String temp = String.valueOf(guess);
+        guess = temp.toLowerCase().charAt(0);
         guessedLetters.add(guess);
         boolean correct = false;
         Team[] teams = new Team[]{team1, team2};
         teams[teamTurn - 1].getPlayers().get(turn - 1).getServer().setTurn(false);
-        if (this.word.contains(Character.toString(guess))) {
+        if (this.word.toLowerCase().contains(Character.toString(guess))) {
             for (int i = 0; i < this.word.length(); i++) {
-                if (this.word.charAt(i) == guess) {
+                if (this.word.toLowerCase().charAt(i) == guess) {
                     this.hiddenWord = this.hiddenWord.substring(0, i) + guess + this.hiddenWord.substring(i + 1);
                 }
             }
@@ -107,6 +104,13 @@ public class HangmanMulti {
             correct = false;
         }
 
+        for (Team team : teams) {
+            for (Player p : team.getPlayers()) {
+                if (p != teams[teamTurn - 1].getPlayers().get(turn - 1))
+                    p.getServer().setPlayerPlayed(true);
+            }
+        }
+
         if (teamTurn == 2) {
 
             if (turn == team2.getPlayers().size())
@@ -114,16 +118,27 @@ public class HangmanMulti {
             else
                 turn++;
         }
-        for (Team team : teams) {
-            for (Player p : team.getPlayers()) {
-                if (p != teams[teamTurn - 1].getPlayers().get(turn - 1))
-                    p.getServer().setPlayerPlayed(true);
-            }
-        }
         teamTurn = (teamTurn == 1) ? 2 : 1;
         teams[teamTurn - 1].getPlayers().get(turn - 1).getServer().setTurn(true);
 
         return correct;
+    }
+    public boolean checkPreviousGuess(char guess) {
+        String temp = String.valueOf(guess);
+        guess = temp.toLowerCase().charAt(0);
+
+        return guessedLetters.contains(guess);
+    }
+    public void endGame() {
+        for (Team team : new Team[]{team1, team2}) {
+            for (Player player : team.getPlayers()) {
+                player.getServer().setPlayerExited(true);
+                player.getServer().setPlayerPlayed(true);
+            }
+        }
+        Database.removeMultiplayerGame(this);
+        Database.removeTeam(team1);
+        Database.removeTeam(team2);
     }
 
     public Team getTeam1() {
@@ -219,15 +234,37 @@ public class HangmanMulti {
     }
 
     public Team getWinner() {
+        Database.removeMultiplayerGame(this);
+        Database.removeTeam(team1);
+        Database.removeTeam(team2);
+
+        teamTurn = 2;
+        turn = 1;
+
+        team1.getPlayers().get(turn - 1).getServer().setSaveScore(true);
         if(Team2IncorrectGuesses == 0)
             return team1;
         else if(Team1IncorrectGuesses == 0)
             return team2;
-        else if (Team1CorrectGuesses > Team2CorrectGuesses)
+        else if (Team1IncorrectGuesses > Team2IncorrectGuesses)
             return team1;
-        else if (Team2CorrectGuesses > Team1CorrectGuesses)
+        else if (Team2IncorrectGuesses > Team1IncorrectGuesses)
             return team2;
         else
             return null;
+    }
+
+    public void saveScores() {
+        Team []teams = new Team[]{team1, team2};
+        teams[teamTurn - 1].getPlayers().get(turn - 1).getServer().setSaveScore(true);
+
+        if (teamTurn == 2) {
+
+            if (turn == team2.getPlayers().size())
+                turn = 1;
+            else
+                turn++;
+        }
+        teamTurn = (teamTurn == 1) ? 2 : 1;
     }
 }

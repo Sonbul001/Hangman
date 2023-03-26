@@ -6,9 +6,11 @@ import com.mycompany.hangman.Game.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Scanner;
 
 public class Server implements Runnable {
+
+    BufferedWriter writer;
+    BufferedReader reader;
 
     protected Socket socket;
     protected static Thread t;
@@ -24,75 +26,13 @@ public class Server implements Runnable {
 
     protected boolean playerPlayed = false;
 
+    protected boolean playerExited = false;
+
+
+    protected boolean saveScore = false;
+
     //protected boolean teamFull = false;
     protected Player loggedinPlayer = null;
-
-    public static void loadFiles() {
-        creds = new File("credentials.txt");
-        history = new File("history.txt");
-        config = new File("config.txt");
-        lookup = new File("lookup.txt");
-        try {
-            Scanner reader = new Scanner(config);
-            String[] data = reader.nextLine().split("-");
-            incorrectGuesses = Integer.parseInt(data[1]);
-            data = reader.nextLine().split("-");
-            minPlayers = Integer.parseInt(data[1]);
-            data = reader.nextLine().split("-");
-            maxPlayers = Integer.parseInt(data[1]);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    public static String register(String username, String password, String name) {
-        boolean exists = false;
-        try {
-            Scanner reader = new Scanner(creds);
-            while (reader.hasNextLine()) {
-                String data = reader.nextLine();
-                String[] parsed = data.split(" ");
-                if (parsed[0].equals(username)) {
-                    exists = true;
-                    break;
-                }
-            }
-            reader.close();
-            if (!exists) {
-                BufferedWriter writer = new BufferedWriter(new FileWriter("credentials.txt", true));
-                writer.write(username + " " + password + " " + name);
-                writer.newLine();
-                writer.close();
-            } else {
-                return "Username already exists";
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "Welcome " + name;
-    }
-
-    public static String login(String username, String password) {
-        try {
-            Scanner reader = new Scanner(creds);
-            while (reader.hasNextLine()) {
-                String data = reader.nextLine();
-                String[] parsed = data.split(" ");
-                if (parsed[0].equals(username)) {
-                    if (parsed[1].equals(password)) {
-                        return "Welcome " + parsed[2];
-                    } else {
-                        return "401 UNAUTHORIZED";
-                    }
-                }
-            }
-            reader.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        return "404 NOT FOUND";
-    }
 
     public boolean isTurn() {
         return turn;
@@ -110,38 +50,215 @@ public class Server implements Runnable {
         return gameStarted;
     }
 
-    public void MultiplayerGame() {
+    public void setBufferedWriter(BufferedWriter writer) {
+        this.writer = writer;
+    }
+
+    public void setBufferedReader(BufferedReader reader) {
+        this.reader = reader;
+    }
+
+    public void setSaveScore(boolean saveScore) {
+        this.saveScore = saveScore;
+    }
+
+    public boolean getSaveScore() {
+        return saveScore;
+    }
+
+
+
+    public void login() {
         try {
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            Player result = null;
+            while (result == null) {
+                String out, in;
+
+                out = "Please enter your username and password separated by a space";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                // input format should be (username password)
+                in = reader.readLine();
+                String[] info = in.split(" ");
+                System.out.println(info[0]);
+                System.out.println(info[1]);
+                if (!Database.checkUsername(info[0])) {
+                    writer.write("404 Username not found");
+                    writer.newLine();
+                    writer.flush();
+                } else if (!Database.checkPassword(info[0], info[1])) {
+                    writer.write("401 unauthorized");
+                    writer.newLine();
+                    writer.flush();
+                } else if (Database.checkLoggedIn(info[0])) {
+                    writer.write("User already logged in");
+                    writer.newLine();
+                    writer.flush();
+                } else {
+                    result = Database.getPlayer(info[0], info[1]);
+                    Database.addLoggedInPlayer(result);
+                }
+
+            }
+            writer.write("Welcome " + result.getName());
+            writer.newLine();
+            writer.flush();
+            loggedinPlayer = result;
+            loggedinPlayer.setServer(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void register() {
+        try {
             String out, in;
+            Player result = null;
+            while (result == null) {
+                out = "Please enter your username, password, and name separated by a space";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
 
-            out = "Please choose one of the following:";
+                // input format should be (username password name)
+                in = reader.readLine();
+                String[] info = in.split(" ");
+                System.out.println(info[0]);
+                System.out.println(info[1]);
+                result = Database.addPlayer(info[0], info[1], info[2]);
+                if (result == null) {
+                    writer.write("Username already exists");
+                    writer.newLine();
+                    writer.flush();
+                }
+            }
+            writer.write("Welcome " + result.getName());
+            writer.newLine();
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void singlePlayerGame(){
+        try {
+            String out, in;
+            String word = Database.getWord();
+            HangmanSingle game = new HangmanSingle(loggedinPlayer, word);
+            out = "Your word is " + game.getHiddenWord();
             writer.write(out);
             writer.newLine();
             writer.flush();
 
+            out = "You have " + game.getIncorrectGuesses() + " remaining guesses";
+            writer.write(out);
+            writer.newLine();
+            writer.flush();
+
+            boolean exited = false;
+            while (game.getIncorrectGuesses() != 0 && !game.getHiddenWord().equalsIgnoreCase(word)) {
+                out = "Please guess a letter";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+                in = reader.readLine();
+
+                char guessCharacter = in.charAt(0);
+
+                if (guessCharacter == '-') {
+                    exited = true;
+                    break;
+                }
+
+                if (game.checkPreviousGuess(guessCharacter)) {
+                    out = "You have already guessed this letter";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                } else if (game.checkGuess(guessCharacter)) {
+                    out = "Correct!";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                } else {
+                    out = "Incorrect!";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                }
+                out = "Your word is " + game.getHiddenWord();
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                out = "You have " + game.getIncorrectGuesses() + " remaining guesses";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+            }
+            if (exited) {
+                out = "You exited the game";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+            } else if (game.getHiddenWord().equalsIgnoreCase(word)) {
+                out = "You win!";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+            } else {
+                out = "You lose!";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+            }
+
+            out = "Your score is " + game.getCorrectGuesses();
+            writer.write(out);
+            writer.newLine();
+            writer.flush();
+
+            if (!exited) {
+                loggedinPlayer.addToSinglePlayerGamesHistory(game.getCorrectGuesses());
+                Database.addGameToHistory(loggedinPlayer.getUsername(), "single", game.getCorrectGuesses());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public HangmanMulti createTeam() {
+        try {
+            String out, in;
             HangmanMulti game = null;
-
-            out = "1. Create Game";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            out = "2. Join Game";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            in = reader.readLine();
-            if (in.equalsIgnoreCase("1")) {
+            String teamName = null;
+            while (true) {
                 out = "Please enter the name of the team";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
 
                 in = reader.readLine();
-                String teamName = in;
+                teamName = in;
+
+                if (!Database.checkTeamNames(teamName)) {
+                    out = "Team name already exists, choose another name please";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                    continue;
+                }
+                else
+                {
+                    out = "Team name is valid";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                }
+                break;
+            }
+            int teamSize = 0;
+            while(true) {
 
                 out = "Please enter the size of the team";
                 writer.write(out);
@@ -149,65 +266,158 @@ public class Server implements Runnable {
                 writer.flush();
 
                 in = reader.readLine();
-                int teamSize = Integer.parseInt(in);
+                teamSize = Integer.parseInt(in);
 
-                Team team = new Team(teamName, loggedinPlayer, teamSize);
-                Database.addTeam(team);
-
-                out = "Team Code is: " + team.getCode();
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
-
-                while (team.getPlayers().size() != teamSize) {
-                    System.out.print("");
-                }
-
-                out = "Team is full";
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
-
-                out = "Please enter ready to search for opponent";
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
-
-                in = reader.readLine();
-                if (in.equalsIgnoreCase("ready")) {
-                    String word = Database.getWord();
-                    game = Database.createMultiplayerGame(teamSize, team, word);
-
-                    out = "Game has been created";
+                if(!Database.checkTeamSize(teamSize)) {
+                    out = "Team size is invalid, Size must be between " + Database.getMinPlayers() + " and " + Database.getMaxPlayers() ;
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
-
-                    out = "Please wait for opponent to join";
+                    continue;
+                }
+                else
+                {
+                    out = "Team size is valid";
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
                 }
-            } else if (in.equalsIgnoreCase("2")) {
+                break;
+
+            }
+
+            Team team = new Team(teamName, loggedinPlayer, teamSize);
+            Database.addTeam(team);
+
+            out = "Team Code is: " + team.getCode();
+            writer.write(out);
+            writer.newLine();
+            writer.flush();
+
+            while (team.getPlayers().size() != teamSize) {
+                System.out.print("");
+            }
+
+            out = "Team is full";
+            writer.write(out);
+            writer.newLine();
+            writer.flush();
+
+            out = "Please enter ready to search for opponent";
+            writer.write(out);
+            writer.newLine();
+            writer.flush();
+
+            in = reader.readLine();
+            if (in.equalsIgnoreCase("ready")) {
+                String word = Database.getWord();
+                game = Database.createMultiplayerGame(teamSize, team, word);
+
+                out = "Game has been created";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                out = "Please wait for opponent to join";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+            }
+            return game;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public HangmanMulti joinTeam() {
+        try {
+            HangmanMulti game = null;
+            String out, in;
+
+
+
+            int code = 0;
+            while (true) {
                 out = "Please enter the code of the team";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
 
                 in = reader.readLine();
-                int code = Integer.parseInt(in);
-                Team team = Database.joinTeam(loggedinPlayer, code);
+                code = Integer.parseInt(in);
 
-                out = "Please wait for Leader to start the game";
+                if (!Database.checkTeamExists(code)) {
+                    out = "Team code is invalid";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                    continue;
+                } else if (Database.checkTeamFull(code)) {
+                    out = "Team is full";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                    continue;
+                }
+                break;
+            }
+            Team team = Database.joinTeam(loggedinPlayer, code);
+
+            out = "Please wait for Leader to start the game";
+            writer.write(out);
+            writer.newLine();
+            writer.flush();
+
+            while (Database.getMultiGamePlayer(loggedinPlayer) == null) {
+                System.out.print("");
+            }
+            game = Database.getMultiGamePlayer(loggedinPlayer);
+            return game;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public void multiPlayerGame() {
+        try {
+            String out, in;
+            HangmanMulti game = null;
+
+            while (true) {
+                out = "Please choose one of the following:";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
 
-                while (Database.getMultiGamePlayer(loggedinPlayer) == null) {
-                    System.out.print("");
-                }
-                game = Database.getMultiGamePlayer(loggedinPlayer);
 
+                out = "1. Create Team";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                out = "2. Join Team";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                in = reader.readLine();
+                if(Integer.parseInt(in) == 1 || Integer.parseInt(in) == 2) {
+                    break;
+                }
+                else {
+                    out = "Invalid input";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                }
+            }
+                if (in.equalsIgnoreCase("1")) {
+                    game = createTeam();
+            }
+                else if (in.equalsIgnoreCase("2")) {
+                    game = joinTeam();
             }
 
             while (!gameStarted) {
@@ -223,7 +433,6 @@ public class Server implements Runnable {
             writer.write(out);
             writer.newLine();
             writer.flush();
-
             while (!game.isGameOver()) {
                 while (!turn) {
                     if (game.isGameOver()) {
@@ -246,6 +455,10 @@ public class Server implements Runnable {
                     while (!playerPlayed) {
                         System.out.print("");
                     }
+                    if(playerExited)
+                    {
+                        break;
+                    }
                     playerPlayed = false;
                     out = name + " has guessed " + game.getGuessedLetters().get(game.getGuessedLetters().size() - 1);
                     writer.write(out);
@@ -256,6 +469,10 @@ public class Server implements Runnable {
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
+                }
+                if(playerExited)
+                {
+                    break;
                 }
                 if (game.isGameOver()) {
                     break;
@@ -278,7 +495,19 @@ public class Server implements Runnable {
                 in = reader.readLine();
                 char letter = in.charAt(0);
 
-                if (game.checkGuess(letter, loggedinPlayer)) {
+                if(letter == '-')
+                {
+                    playerExited = true;
+                    game.endGame();
+                    break;
+                }
+                else if(game.checkPreviousGuess(letter)){
+                    out = "This letter is already guessed";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                }
+                else if (game.checkGuess(letter, loggedinPlayer)) {
                     out = "Correct";
                     writer.write(out);
                     writer.newLine();
@@ -295,15 +524,77 @@ public class Server implements Runnable {
                 writer.newLine();
                 writer.flush();
             }
-            out = "GAME OVER";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
 
-            out = "TEAM " + game.getWinner().getTeamName() + " HAS WON";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
+            if(playerExited)
+            {
+                out = "Game has been exited";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                out = "Game score will not be saved";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+            }
+            else {
+                out = "GAME OVER";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                if (game.getWinner() == null) {
+                    out = "DRAW";
+                } else {
+                    out = "TEAM " + game.getWinner().getTeamName() + " HAS WON";
+                }
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+            }
+
+
+            if(game.getTeam1().getPlayers().contains(loggedinPlayer)) {
+                out = "Your Team Score is: " + game.getTeam1CorrectGuesses();
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                if(!playerExited) {
+                    while (!saveScore) {
+                        System.out.print("");
+                    }
+
+
+                    loggedinPlayer.addToMultiPlayerGamesHistory(game.getTeam1CorrectGuesses());
+                    Database.addGameToHistory(loggedinPlayer.getUsername(), "multi", game.getTeam1CorrectGuesses());
+
+                    game.saveScores();
+                }
+            }
+            else{
+                out = "Your Team Score is: " + game.getTeam2CorrectGuesses();
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+                if(!playerExited) {
+                    while (!saveScore) {
+                        System.out.print("");
+                    }
+
+
+                    loggedinPlayer.addToMultiPlayerGamesHistory(game.getTeam2CorrectGuesses());
+                    Database.addGameToHistory(loggedinPlayer.getUsername(), "multi", game.getTeam2CorrectGuesses());
+
+                    game.saveScores();
+                }
+                playerExited = false;
+                playerPlayed = false;
+                turn = false;
+                gameStarted = false;
+                saveScore = false;
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -311,11 +602,61 @@ public class Server implements Runnable {
 
     }
 
+    public void scoreHistory() {
+        try {
+
+            String out, in;
+
+            if(loggedinPlayer.getMultiPlayerGamesHistory().size()==0 && loggedinPlayer.getSinglePlayerGamesHistory().size()==0){
+                out = "You have not played any games yet";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+            }
+            else{
+                if(loggedinPlayer.getSinglePlayerGamesHistory().size()>0) {
+                    out = "Your single player games history is: ";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+                    for (int i = 0; i < loggedinPlayer.getSinglePlayerGamesHistory().size(); i++) {
+                        out = "Game " + (i + 1) + ": " + loggedinPlayer.getSinglePlayerGamesHistory().get(i).toString();
+                        writer.write(out);
+                        writer.newLine();
+                        writer.flush();
+                    }
+                }
+
+                if( loggedinPlayer.getMultiPlayerGamesHistory().size()>0) {
+                    out = "Your multiplayer games history is: ";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+                    for (int i = 0; i < loggedinPlayer.getMultiPlayerGamesHistory().size(); i++) {
+                        out = "Game " + (i + 1) + ": " + loggedinPlayer.getMultiPlayerGamesHistory().get(i).toString();
+                        writer.write(out);
+                        writer.newLine();
+                        writer.flush();
+                    }
+                }
+                out = "end";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+            }
+
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Override
     public void run() {
         try {
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String out, in;
 
             out = "Welcome to hangman";
@@ -323,144 +664,105 @@ public class Server implements Runnable {
             writer.newLine();
             writer.flush();
 
-            out = "Please choose one of the following:";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
+            while (true) {
 
-            out = "1. Login";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            out = "2. Register";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            in = reader.readLine();
-            if (in.equalsIgnoreCase("1")) {
-                out = "Please enter your username and password separated by a space";
+                out = "Please choose one of the following:";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
 
-                // input format should be (username password)
+                out = "1. Login";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                out = "2. Register";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
                 in = reader.readLine();
-                String[] info = in.split(" ");
-                System.out.println(info[0]);
-                System.out.println(info[1]);
-                Player result = Database.getPlayer(info[0], info[1]);
-                if (result == null) {
-                    writer.write("Wrong Username or Password");
-                    writer.newLine();
-                    writer.flush();
-                } else {
-                    writer.write("Welcome " + result.getName());
-                    writer.newLine();
-                    writer.flush();
-                    loggedinPlayer = result;
-                    loggedinPlayer.setServer(this);
+                if(Integer.parseInt(in) == 1 || Integer.parseInt(in) == 2)
+                {
+                    break;
                 }
-            } else if (in.equalsIgnoreCase("2")) {
-                out = "Please enter your username, password, and name separated by a space";
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
-
-                // input format should be (username password name)
-                in = reader.readLine();
-                String[] info = in.split(" ");
-                System.out.println(info[0]);
-                System.out.println(info[1]);
-                String result = register(info[0], info[1], info[2]);
-                writer.write(result);
-                writer.newLine();
-                writer.flush();
-            } else {
-
-            }
-            out = "Please choose one of the following:";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            out = "1. Singleplayer";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            out = "2. Multiplayer";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            in = reader.readLine();
-            if (in.equalsIgnoreCase("1")) {
-                String word = Database.getWord();
-                HangmanSingle game = new HangmanSingle(loggedinPlayer, word);
-                out = "Your word is " + game.getHiddenWord();
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
-
-                out = "You have " + incorrectGuesses + " remaining guesses";
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
-
-                while (game.getIncorrectGuesses() != 0 && !game.getHiddenWord().equalsIgnoreCase(word)) {
-                    out = "Please guess a letter";
+                else {
+                    out = "Invalid input";
                     writer.write(out);
                     writer.newLine();
                     writer.flush();
+                }
+            }
+            if (in.equalsIgnoreCase("1")) {
+                login();
+            } else if (in.equalsIgnoreCase("2")) {
+                register();
+            }
+
+            //for continuous playing
+            while (true) {
+
+                //for valdating input
+                while (true) {
+
+                    out = "Please choose one of the following:";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+                    out = "1. Singleplayer";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+                    out = "2. Multiplayer";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+                    out = "3. Score History";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+                    out = "4. Logout";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+
                     in = reader.readLine();
 
-                    char guessCharacter = in.charAt(0);
-
-                    if (game.checkGuess(guessCharacter)) {
-                        out = "Correct!";
-                        writer.write(out);
-                        writer.newLine();
-                        writer.flush();
-                    } else {
-                        out = "Incorrect!";
+                    if(Integer.parseInt(in) == 1 || Integer.parseInt(in) == 2 || Integer.parseInt(in) == 3 || Integer.parseInt(in) == 4)
+                    {
+                        break;
+                    }
+                    else {
+                        out = "Invalid input";
                         writer.write(out);
                         writer.newLine();
                         writer.flush();
                     }
-                    out = "Your word is " + game.getHiddenWord();
-                    writer.write(out);
-                    writer.newLine();
-                    writer.flush();
-
-                    out = "You have " + game.getIncorrectGuesses() + " remaining guesses";
-                    writer.write(out);
-                    writer.newLine();
-                    writer.flush();
                 }
-                if (game.getHiddenWord().equalsIgnoreCase(word)) {
-                    out = "You win!";
-                    writer.write(out);
-                    writer.newLine();
-                    writer.flush();
-                } else {
-                    out = "You lose!";
-                    writer.write(out);
-                    writer.newLine();
-                    writer.flush();
+                if (in.equalsIgnoreCase("1")) {
+                    singlePlayerGame();
                 }
+                else if (in.equalsIgnoreCase("2")) {
+                    multiPlayerGame();
+                }
+                else if (in.equalsIgnoreCase("3")) {
+                    scoreHistory();
+                }
+                else if (in.equalsIgnoreCase("4")) {
+                    out = "Thank you for playing!";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
 
-                out = "Your score is " + game.getCorrectGuesses();
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
+                    Database.removeLoggedInPlayer(loggedinPlayer);
 
-                loggedinPlayer.addToSinglePlayerGamesHistory(game.getCorrectGuesses());
-                Database.addGameToHistory(loggedinPlayer.getUsername(), "single", game.getCorrectGuesses());
-
-            } else if (in.equalsIgnoreCase("2")) {
-                MultiplayerGame();
+                    break;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -479,16 +781,26 @@ public class Server implements Runnable {
         this.playerPlayed = playerPlayed;
     }
 
+    public boolean isPlayerExited() {
+        return playerExited;
+    }
+
+    public void setPlayerExited(boolean playerExited) {
+        this.playerExited = playerExited;
+    }
+
     public static void main(String[] args) throws Exception {
         int port = 6766;
         System.out.println("Server is running...");
         ServerSocket serverSocket = new ServerSocket(port);
-        loadFiles();
+        Database.loadFiles();
         while (true) {
             try {
                 Socket socket = serverSocket.accept();
                 Server server = new Server();
                 server.setSocket(socket);
+                server.setBufferedWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
+                server.setBufferedReader(new BufferedReader(new InputStreamReader(socket.getInputStream())));
                 t = new Thread(server);
                 t.start();
 

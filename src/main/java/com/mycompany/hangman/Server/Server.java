@@ -303,25 +303,33 @@ public class Server implements Runnable {
             writer.newLine();
             writer.flush();
 
-            out = "Please enter ready to search for opponent";
-            writer.write(out);
-            writer.newLine();
-            writer.flush();
-
-            in = reader.readLine();
-            if (in.equalsIgnoreCase("ready")) {
-                String word = Database.getWord();
-                game = Database.createMultiplayerGame(teamSize, team, word);
-
-                out = "Game has been created";
+            while (true) {
+                out = "Please enter ready to search for opponent";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
 
-                out = "Please wait for opponent to join";
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
+                in = reader.readLine();
+                if (in.equalsIgnoreCase("ready")) {
+                    String word = Database.getWord();
+                    game = Database.createMultiplayerGame(teamSize, team, word);
+
+                    out = "Game has been created";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+
+                    out = "Please wait for opponent to join";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                    break;
+                } else {
+                    out = "Invalid input";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
+                }
             }
             return game;
 
@@ -398,6 +406,11 @@ public class Server implements Runnable {
                 writer.flush();
 
                 out = "2. Join Team";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                out= "Enter your choice: ";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
@@ -487,7 +500,7 @@ public class Server implements Runnable {
                 writer.newLine();
                 writer.flush();
 
-                out = "Please enter a letter";
+                out = "Please guess a letter";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
@@ -642,10 +655,6 @@ public class Server implements Runnable {
                         writer.flush();
                     }
                 }
-                out = "end";
-                writer.write(out);
-                writer.newLine();
-                writer.flush();
             }
 
 
@@ -677,6 +686,11 @@ public class Server implements Runnable {
                 writer.flush();
 
                 out = "2. Register";
+                writer.write(out);
+                writer.newLine();
+                writer.flush();
+
+                out= "Enter your choice: ";
                 writer.write(out);
                 writer.newLine();
                 writer.flush();
@@ -730,6 +744,10 @@ public class Server implements Runnable {
                     writer.newLine();
                     writer.flush();
 
+                    out= "Enter your choice: ";
+                    writer.write(out);
+                    writer.newLine();
+                    writer.flush();
 
                     in = reader.readLine();
 

@@ -180,8 +180,8 @@ public class Database {
     public static String getWord() {
         try {
             Scanner reader = new Scanner(lookup);
-            int wordLine =(int) Math.round(Math.random()*20);
-            for (int i = 0; i < wordLine; i++) {
+            int wordLine =(int) Math.round(Math.random()*19);
+            for (int i = 0; i <= wordLine; i++) {
                 reader.nextLine();
                 if(i==wordLine-2) {
                     String word = reader.nextLine();

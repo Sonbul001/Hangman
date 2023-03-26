@@ -137,6 +137,8 @@ public class Server implements Runnable {
             writer.write("Welcome " + result.getName());
             writer.newLine();
             writer.flush();
+            loggedinPlayer = result;
+            loggedinPlayer.setServer(this);
         } catch (IOException e) {
             e.printStackTrace();
         }

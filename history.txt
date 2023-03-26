@@ -1,8 +1,9 @@
 karim single 2 11
-karim multi 5 5 4 5 5 1 5 3 4
-amr multi 5 5 4 5 4 2 4 3 3
-koko multi 5 5 4 5 5 1 5 3 4
-moora multi 5 5 4 5 4 2 2 4 3 3
+karim multi 5 5 4 5 5 1 5 3 4 4 5
+amr multi 5 5 4 5 4 2 4 3 3 2
+koko multi 5 5 4 5 5 1 5 3 4 4 5
+moora multi 5 5 4 5 4 2 2 4 3 3 2 2
 amr single 1 2 10 8 6 3 1 2
-k multi 2
+k multi 2 5
 k2 multi 1
+sonbol multi 2
